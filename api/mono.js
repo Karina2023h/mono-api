@@ -13,6 +13,15 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
+    if (!data.jars || !Array.isArray(data.jars)) {
+
+      return res.status(500).json({
+        error: "No jars returned",
+        data
+      });
+
+    }
+
     const jar = data.jars.find(
       item => item.sendId === "jar/AScRAeMaCs"
     );
@@ -20,29 +29,63 @@ export default async function handler(req, res) {
     if (!jar) {
 
       return res.status(404).json({
-        error: "Jar not found"
+        error: "Jar not found",
+        availableJars: data.jars
       });
 
     }
 
-    const collected = Math.round(jar.balance / 100);
-    const goal = Math.round(jar.goal / 100);
-    const percent = Math.round(
-      collected / goal * 100
-    );
+    const collected =
+      Number(jar.balance || 0) / 100;
+
+    const goal =
+      Number(jar.goal || 40000000) / 100;
+
+    const remaining =
+      Math.max(
+        goal - collected,
+        0
+      );
+
+    const percent =
+      goal > 0
+        ? (
+            collected /
+            goal
+          ) * 100
+        : 0;
 
     return res.status(200).json({
-      title: jar.title,
-      collected,
-      goal,
-      percent,
-      remaining: goal - collected
+
+      title:
+        jar.title || "Збір",
+
+      collected:
+        Math.round(collected),
+
+      goal:
+        Math.round(goal),
+
+      remaining:
+        Math.round(remaining),
+
+      percent:
+        Number(
+          percent.toFixed(1)
+        )
+
     });
 
   } catch (error) {
 
     return res.status(500).json({
-      error: error.message
+
+      error:
+        error.message,
+
+      stack:
+        error.stack
+
     });
 
   }
