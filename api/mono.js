@@ -1,56 +1,66 @@
 export default async function handler(req, res) {
+
   res.setHeader(
-  'Access-Control-Allow-Origin',
-  '*'
-);
+    'Access-Control-Allow-Origin',
+    '*'
+  );
 
-res.setHeader(
-  'Access-Control-Allow-Methods',
-  'GET, OPTIONS'
-);
+  res.setHeader(
+    'Access-Control-Allow-Methods',
+    'GET, OPTIONS'
+  );
 
-res.setHeader(
-  'Access-Control-Allow-Headers',
-  'Content-Type'
-);
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type'
+  );
 
-if (req.method === 'OPTIONS') {
-
-  return res.status(200).end();
-
-}
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
   try {
 
     const response = await fetch(
-      "https://api.monobank.ua/personal/client-info",
+      'https://api.monobank.ua/personal/client-info',
       {
         headers: {
-          "X-Token": process.env.MONO_TOKEN
+          'X-Token': process.env.MONO_TOKEN
         }
       }
     );
 
-    const data = await response.json();
-
-    if (!data.jars || !Array.isArray(data.jars)) {
+    if (!response.ok) {
 
       return res.status(500).json({
-        error: "No jars returned",
-        data
+        error: 'Monobank API Error',
+        status: response.status
+      });
+
+    }
+
+    const data = await response.json();
+
+    if (
+      !data ||
+      !data.jars ||
+      !Array.isArray(data.jars)
+    ) {
+
+      return res.status(500).json({
+        error: 'No jars returned'
       });
 
     }
 
     const jar = data.jars.find(
-      item => item.sendId === "jar/AScRAeMaCs"
+      item => item.sendId === 'jar/AScRAeMaCs'
     );
 
     if (!jar) {
 
       return res.status(404).json({
-        error: "Jar not found",
-        availableJars: data.jars
+        error: 'Jar not found'
       });
 
     }
@@ -59,7 +69,7 @@ if (req.method === 'OPTIONS') {
       Number(jar.balance || 0) / 100;
 
     const goal =
-      Number(jar.goal || 40000000) / 100;
+      Number(jar.goal || 0) / 100;
 
     const remaining =
       Math.max(
@@ -69,16 +79,15 @@ if (req.method === 'OPTIONS') {
 
     const percent =
       goal > 0
-        ? (
-            collected /
-            goal
-          ) * 100
+        ? (collected / goal) * 100
         : 0;
 
     return res.status(200).json({
 
+      success: true,
+
       title:
-        jar.title || "Збір",
+        jar.title || 'Збір',
 
       collected:
         Math.round(collected),
@@ -92,7 +101,10 @@ if (req.method === 'OPTIONS') {
       percent:
         Number(
           percent.toFixed(1)
-        )
+        ),
+
+      updated:
+        Date.now()
 
     });
 
@@ -100,11 +112,10 @@ if (req.method === 'OPTIONS') {
 
     return res.status(500).json({
 
-      error:
-        error.message,
+      success: false,
 
-      stack:
-        error.stack
+      error:
+        error.message
 
     });
 
